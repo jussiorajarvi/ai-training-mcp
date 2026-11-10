@@ -1,0 +1,8 @@
+.idea/
+dist/
+node_modules/
+/.claude/worktrees
+/.claude/settings.local.json
+test-results
+playwright-report
+.playwright-mcp

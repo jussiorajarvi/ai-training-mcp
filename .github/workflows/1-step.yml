@@ -1,0 +1,82 @@
+# Name is Step x, where x is the last step number in the exercise.
+name: Step 1
+
+# Define how the workflow is triggered.
+on:
+  push:
+    paths:
+      - 'docs/MigrationPlan.md'
+      - 'docs/MigrationPlanWithContext7.md'
+      - 'e2e/**'
+      - 'test/**'
+      - 'src/**'
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+jobs:
+  exercise_checking:
+    name: Start checking
+    uses: ./.github/workflows/exercise-checking.yml
+
+  validate_exercise:
+    name: Validate Exercise Completion
+    runs-on: ubuntu-latest
+    needs: exercise_checking
+    if: needs.exercise_checking.outputs.comment-id != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check migration plan files exist
+        run: |
+          if [ ! -f "docs/MigrationPlan.md" ]; then
+            echo "❌ docs/MigrationPlan.md not found"
+            exit 1
+          fi
+          echo "✅ docs/MigrationPlan.md exists"
+
+          if [ ! -f "docs/MigrationPlanWithContext7.md" ]; then
+            echo "❌ docs/MigrationPlanWithContext7.md not found"
+            exit 1
+          fi
+          echo "✅ docs/MigrationPlanWithContext7.md exists"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install playwright dependencies
+        run: npx playwright install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+  exercise_passed:
+    name: Exercise passed
+    needs: [exercise_checking, validate_exercise]
+    if: needs.validate_exercise.result == 'success'
+    uses: ./.github/workflows/exercise-passed.yml
+    with:
+      module-title: "MCP"
+      issue-url: ${{ needs.exercise_checking.outputs.issue-url }}
+      issue-number: ${{ needs.exercise_checking.outputs.issue-number }}
+      comment-id: ${{ needs.exercise_checking.outputs.comment-id }}
+
+  exercise_failed:
+    name: Exercise failed
+    needs: [exercise_checking, validate_exercise]
+    if: always() && needs.validate_exercise.result == 'failure'
+    uses: ./.github/workflows/exercise-failed.yml
+    with:
+      comment-id: ${{ needs.exercise_checking.outputs.comment-id }}
+      feedback-message: "The exercise validation failed. Please ensure that all tests pass and that both migration plan files exist (`docs/MigrationPlan.md` and `docs/MigrationPlanWithContext7.md`). Then try again."
