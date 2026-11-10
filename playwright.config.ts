@@ -5,6 +5,9 @@ import { defineConfig, devices } from '@playwright/test';
  * See https://playwright.dev/docs/intro
  */
 const isCI = !!process.env.CI;
+// Dedicated port for the e2e dev server so tests never hit another app that
+// happens to be running on Vite's default port 5173.
+const DEV_PORT = 5199;
 
 export default defineConfig({
   testDir: './e2e',
@@ -21,7 +24,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
+    baseURL: process.env.CI ? 'http://localhost:4173' : `http://localhost:${DEV_PORT}`,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
@@ -43,8 +46,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: process.env.CI ? 'npm run preview' : 'npm run dev',
-    url: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
+    command: process.env.CI ? 'npm run preview' : `npm run dev -- --port ${DEV_PORT} --strictPort`,
+    url: process.env.CI ? 'http://localhost:4173' : `http://localhost:${DEV_PORT}`,
     reuseExistingServer: !process.env.CI,
   },
 });
